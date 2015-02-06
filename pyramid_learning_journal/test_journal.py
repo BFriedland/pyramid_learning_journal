@@ -121,3 +121,11 @@ def test_read_entries(req_context):
         for key in 'id', 'created':
             assert key in entry
 
+
+@pytest.fixture(scope='function')
+def app(db):
+    from journal import main
+    from webtest import TestApp
+    os.environ['DATABASE_URL'] = TEST_DSN
+    app = main()
+    return TestApp(app)
