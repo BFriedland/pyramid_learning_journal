@@ -10,6 +10,7 @@ from pyramid.events import NewRequest, subscriber
 from waitress import serve
 import psycopg2
 from contextlib import closing
+import datetime
 
 
 DB_SCHEMA = """
@@ -21,25 +22,27 @@ CREATE TABLE IF NOT EXISTS entries (
 )
 """
 
+INSERT_ENTRY = """
+INSERT INTO entries (title, text, created) VALUES (%s, %s, %s)
+"""
+
 
 logging.basicConfig()
 log = logging.getLogger(__file__)
 
 
-@view_config(route_name='home', renderer='string')
-def home(request):
-    return "Hello World"
-
-
 def connect_db(settings):
-    """Return a connection to the configured database"""
+    """
+    Return a connection to the configured database.
+    """
     return psycopg2.connect(settings['db'])
 
 
 def init_db():
-    """Create database dables defined by DB_SCHEMA
+    """
+    Create database dables defined by DB_SCHEMA.
 
-    Warning: This function will not update existing table definitions
+    Warning: This function will not update existing table definitions.
     """
     settings = {}
     settings['db'] = os.environ.get(
@@ -90,7 +93,9 @@ def close_connection(request):
 
 
 def main():
-    """Create a configured wsgi app"""
+    """
+    Create a configured WSGI app.
+    """
     settings = {}
     settings['reload_all'] = os.environ.get('DEBUG', True)
     settings['debug_all'] = os.environ.get('DEBUG', True)
@@ -109,6 +114,21 @@ def main():
     config.scan()
     app = config.make_wsgi_app()
     return app
+
+
+@view_config(route_name='home', renderer='string')
+def home(request):
+    return "Hello World"
+
+
+def write_entry(request):
+    """
+    Write a single entry to the database.
+    """
+    title = request.params.get('title', None)
+    text = request.params.get('text', None)
+    created = datetime.datetime.utcnow()
+    request.db.cursor().execute(INSERT_ENTRY, [title, text, created])
 
 
 if __name__ == '__main__':
