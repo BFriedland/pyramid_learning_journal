@@ -2,9 +2,11 @@
 from contextlib import closing
 from pyramid import testing
 import pytest
+import datetime
 
 from journal import connect_db
 from journal import DB_SCHEMA
+from journal import INSERT_ENTRY
 
 
 TEST_DSN = 'dbname=test_pyramid_learning_journal user=fried'
@@ -91,3 +93,31 @@ def test_write_entry(req_context):
     actual = rows[0]
     for idx, val in enumerate(expected):
         assert val == actual[idx]
+
+
+def test_read_entries_empty(req_context):
+    # "call the function under test"
+    from journal import read_entries
+    result = read_entries(req_context)
+    # "make assertions about the result"
+    assert 'entries' in result
+    assert len(result['entries']) == 0
+
+
+def test_read_entries(req_context):
+    # "prepare data for testing"
+    now = datetime.datetime.utcnow()
+    expected = ('Test Title', 'Test Text', now)
+    run_query(req_context.db, INSERT_ENTRY, expected, False)
+    # "call the function under test"
+    from journal import read_entries
+    result = read_entries(req_context)
+    # "make assertions about the result"
+    assert 'entries' in result
+    assert len(result['entries']) == 1
+    for entry in result['entries']:
+        assert expected[0] == entry['title']
+        assert expected[1] == entry['text']
+        for key in 'id', 'created':
+            assert key in entry
+
