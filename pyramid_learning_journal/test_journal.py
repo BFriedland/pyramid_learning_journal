@@ -3,6 +3,7 @@ from contextlib import closing
 from pyramid import testing
 import pytest
 import datetime
+import os
 
 from journal import connect_db
 from journal import DB_SCHEMA
