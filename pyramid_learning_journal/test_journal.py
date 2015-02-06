@@ -40,7 +40,9 @@ def run_query(db, query, params=(), get_results=True):
 
 @pytest.fixture(scope='session')
 def db(request):
-    """set up and tear down a database"""
+    """
+    Set up and tear down a database.
+    """
     settings = {'db': TEST_DSN}
     init_db(settings)
 
@@ -53,13 +55,18 @@ def db(request):
 
 @pytest.yield_fixture(scope='function')
 def req_context(db, request):
-    """mock a request with a database attached"""
+    """
+    Mock a request with a database attached.
+    """
     settings = db
     req = testing.DummyRequest()
+
+    # "Because yield preserves internal state,
+    # the entire test happens inside the context manager scope!"
     with closing(connect_db(settings)) as db:
         req.db = db
         req.exception = None
         yield req
 
-        # after a test has run, we clear out entries for isolation
+        # "after a test has run, we clear out entries for isolation"
         clear_entries(settings)
