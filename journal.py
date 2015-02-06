@@ -50,11 +50,43 @@ def init_db():
         db.commit()
 
 
+# This function opens a database connection for each client request.
 @subscriber(NewRequest)
 def open_connection(event):
+    """
+    Open a database connection for the request
+    tied to the supplied event, and provide
+    a finished_callback function to close it
+    upon the return of the response to the client.
+    """
+
     request = event.request
     settings = request.registry.settings
     request.db = connect_db(settings)
+    # The request should close this DB connection
+    # right before it's sent back to the client.
+    # For this we use the handy add_finished_callback()
+    # function that pyramid.events.NewRequest objects
+    # provide for this purpose:
+    request.add_finished_callback(close_connection)
+
+
+def close_connection(request):
+    """
+    Close the database connection for this request.
+
+    If there has been an error in the processing of the
+    request, abort any open transactions.
+    """
+
+    db = getattr(request, 'db', None)
+    if db is not None:
+        # Snazzy! Keeps our database clean.
+        if request.exception is not None:
+            db.rollback()
+        else:
+            db.commit()
+        request.db.close()
 
 
 def main():
@@ -83,10 +115,3 @@ if __name__ == '__main__':
     app = main()
     port = os.environ.get('PORT', 5000)
     serve(app, host='0.0.0.0', port=port)
-
-
-
-
-
-
-
