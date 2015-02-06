@@ -137,3 +137,21 @@ def test_empty_listing(app):
     actual = response.body
     expected = 'No entries here so far'
     assert expected in actual
+
+
+@pytest.fixture(scope='function')
+def entry(db, request):
+    """provide a single entry in the database"""
+    settings = db
+    now = datetime.datetime.utcnow()
+    expected = ('Test Title', 'Test Text', now)
+    with closing(connect_db(settings)) as db:
+        run_query(db, INSERT_ENTRY, expected, False)
+        db.commit()
+
+    def cleanup():
+        clear_entries(settings)
+
+    request.addfinalizer(cleanup)
+
+    return expected
