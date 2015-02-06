@@ -129,3 +129,11 @@ def app(db):
     os.environ['DATABASE_URL'] = TEST_DSN
     app = main()
     return TestApp(app)
+
+
+def test_empty_listing(app):
+    response = app.get('/')
+    assert response.status_code == 200
+    actual = response.body
+    expected = 'No entries here so far'
+    assert expected in actual
