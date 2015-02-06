@@ -70,3 +70,24 @@ def req_context(db, request):
 
         # "after a test has run, we clear out entries for isolation"
         clear_entries(settings)
+
+
+def test_write_entry(req_context):
+    from journal import write_entry
+    fields = ('title', 'text')
+    expected = ('Test Title', 'Test Text')
+    req_context.params = dict(zip(fields, expected))
+
+    # "assert that there are no entries when we start"
+    rows = run_query(req_context.db, "SELECT * FROM entries")
+    assert len(rows) == 0
+
+    result = write_entry(req_context)
+    # "manually commit so we can see the entry on query"
+    req_context.db.commit()
+
+    rows = run_query(req_context.db, "SELECT title, text FROM entries")
+    assert len(rows) == 1
+    actual = rows[0]
+    for idx, val in enumerate(expected):
+        assert val == actual[idx]
