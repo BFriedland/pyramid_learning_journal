@@ -193,3 +193,30 @@ def auth_req(request):
     request.addfinalizer(cleanup)
 
     return req
+
+
+def test_do_login_success(auth_req):
+    from journal import do_login
+    auth_req.params = {'username': 'admin', 'password': 'secret'}
+    assert do_login(auth_req)
+
+
+def test_do_login_bad_pass(auth_req):
+    from journal import do_login
+    auth_req.params = {'username': 'admin', 'password': 'wrong'}
+    assert not do_login(auth_req)
+
+
+def test_do_login_bad_user(auth_req):
+    from journal import do_login
+    auth_req.params = {'username': 'bad', 'password': 'secret'}
+    assert not do_login(auth_req)
+
+
+def test_do_login_missing_params(auth_req):
+    from journal import do_login
+    for params in ({'username': 'admin'}, {'password': 'secret'}):
+        auth_req.params = params
+        with pytest.raises(ValueError):
+            do_login(auth_req)
+
