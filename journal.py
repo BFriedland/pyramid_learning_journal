@@ -50,9 +50,9 @@ def init_db():
     Warning: This function will not update existing table definitions.
     """
     settings = {}
-    settings['db'] = os.environ.get(
-        'DATABASE_URL', 'dbname=pyramid_learning_journal user=fried'
-    )
+    settings['db'] = os.environ.get('DATABASE_URL',
+                                    'dbname=pyramid_learning_journal'
+                                    ' user=fried')
     with closing(connect_db(settings)) as db:
         db.cursor().execute(DB_SCHEMA)
         db.commit()
