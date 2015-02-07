@@ -168,6 +168,22 @@ def add_entry(request):
     return HTTPFound(request.route_url('home'))
 
 
+def do_login(request):
+    username = request.params.get('username', None)
+    password = request.params.get('password', None)
+    # CRITICAL:
+    # Do not distinguish between a bad password and a bad username!
+    # To do so is to leak sensitive information.
+    if not (username and password):
+        raise ValueError('both username and password are required')
+
+    settings = request.registry.settings
+    if username == settings.get('auth.username', ''):
+        if password == settings.get('auth.password', ''):
+            return True
+    return False
+
+
 if __name__ == '__main__':
     app = main()
     port = os.environ.get('PORT', 5000)
