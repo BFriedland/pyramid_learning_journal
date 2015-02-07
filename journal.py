@@ -8,6 +8,7 @@ from pyramid.session import SignedCookieSessionFactory
 from pyramid.view import view_config
 from pyramid.events import NewRequest, subscriber
 from pyramid.httpexceptions import HTTPFound, HTTPInternalServerError
+from pyramid.authentication import AuthTktAuthenticationPolicy
 from waitress import serve
 import psycopg2
 from contextlib import closing
@@ -107,13 +108,21 @@ def main():
     settings['db'] = os.environ.get('DATABASE_URL',
                                     'dbname=pyramid_learning_journal'
                                     ' user=fried')
-    # secret value for session signing:
+    settings['auth.username'] = os.environ.get('AUTH_USERNAME', 'admin')
+    settings['auth.password'] = os.environ.get('AUTH_PASSWORD', 'secret')
+    # "secret value for session signing"
     secret = os.environ.get('JOURNAL_SESSION_SECRET', 'itsaseekrit')
+    # "secret value for auth tkt signing"
+    auth_secret = os.environ.get('JOURNAL_AUTH_SECRET', 'anotherseekrit')
     session_factory = SignedCookieSessionFactory(secret)
-    # configuration setup
+    # "configuration setup"
     config = Configurator(
         settings=settings,
-        session_factory=session_factory
+        session_factory=session_factory,
+        authentication_policy=AuthTktAuthenticationPolicy(
+            secret=auth_secret,
+            hashalg='sha512'
+        )
     )
     config.include('pyramid_jinja2')
     config.add_route('home', '/')
