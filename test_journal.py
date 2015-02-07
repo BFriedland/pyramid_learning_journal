@@ -9,6 +9,8 @@ from journal import connect_db
 from journal import DB_SCHEMA
 from journal import INSERT_ENTRY
 
+from cryptacular.bcrypt import BCRYPTPasswordManager
+
 
 TEST_DSN = 'dbname=test_pyramid_learning_journal user=fried'
 
@@ -180,9 +182,11 @@ def test_post_to_add_view(app):
 
 @pytest.fixture(scope='function')
 def auth_req(request):
+    # Push it through the ciphertube
+    manager = BCRYPTPasswordManager()
     settings = {
         'auth.username': 'admin',
-        'auth.password': 'secret',
+        'auth.password': manager.encode('secret'),
     }
     testing.setUp(settings=settings)
     req = testing.DummyRequest()
@@ -219,4 +223,3 @@ def test_do_login_missing_params(auth_req):
         auth_req.params = params
         with pytest.raises(ValueError):
             do_login(auth_req)
-
