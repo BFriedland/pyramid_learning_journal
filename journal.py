@@ -8,7 +8,10 @@ from pyramid.session import SignedCookieSessionFactory
 from pyramid.view import view_config
 from pyramid.events import NewRequest, subscriber
 from pyramid.httpexceptions import HTTPFound, HTTPInternalServerError
+# NOTE: Authentication is logging in, while
+# authorization is figuring out what you can do when logged in.
 from pyramid.authentication import AuthTktAuthenticationPolicy
+from pyramid.authorization import ACLAuthorizationPolicy
 from waitress import serve
 import psycopg2
 from contextlib import closing
@@ -122,7 +125,8 @@ def main():
         authentication_policy=AuthTktAuthenticationPolicy(
             secret=auth_secret,
             hashalg='sha512'
-        )
+        ),
+        authorization_policy=ACLAuthorizationPolicy(),
     )
     config.include('pyramid_jinja2')
     config.add_route('home', '/')
