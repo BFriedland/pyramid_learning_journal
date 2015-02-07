@@ -176,3 +176,20 @@ def test_post_to_add_view(app):
     actual = redirected.body
     for expected in entry_data.values():
         assert expected in actual
+
+
+@pytest.fixture(scope='function')
+def auth_req(request):
+    settings = {
+        'auth.username': 'admin',
+        'auth.password': 'secret',
+    }
+    testing.setUp(settings=settings)
+    req = testing.DummyRequest()
+
+    def cleanup():
+        testing.tearDown()
+
+    request.addfinalizer(cleanup)
+
+    return req
