@@ -17,7 +17,12 @@ from pyramid.httpexceptions import HTTPFound, HTTPInternalServerError
 # authorization is figuring out what you can do when logged in.
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.security import remember, forget
 from cryptacular.bcrypt import BCRYPTPasswordManager
+
+# In order for Pyramid to know where to serve up static files from,
+# it needs to know the absolute path of the direction it's running from.
+WORKING_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -134,8 +139,12 @@ def main():
         authorization_policy=ACLAuthorizationPolicy(),
     )
     config.include('pyramid_jinja2')
+    config.add_static_view('static',
+                           os.path.join(WORKING_DIRECTORY, 'static'))
     config.add_route('home', '/')
     config.add_route('add', '/add')
+    config.add_route('login', '/login')
+    config.add_route('logout', '/logout')
     config.scan()
     app = config.make_wsgi_app()
     return app
@@ -149,6 +158,29 @@ def write_entry(request):
     text = request.params.get('text', None)
     created = datetime.datetime.utcnow()
     request.db.cursor().execute(INSERT_ENTRY, [title, text, created])
+
+
+def do_login(request):
+    username = request.params.get('username', None)
+    password = request.params.get('password', None)
+    # CRITICAL:
+    # Do not distinguish between a bad password and a bad username!
+    # To do so is to leak sensitive information.
+    if not (username and password):
+        raise ValueError('both username and password are required')
+
+    settings = request.registry.settings
+    manager = BCRYPTPasswordManager()
+    if username == settings.get('auth.username', ''):
+        # NEVER
+        # EVER
+        # EVER
+        # STORE PLAIN TEXT PASSWORDS
+        # IN ANY FORMAT
+        # ANYWHERE
+        hashed = settings.get('auth.password', '')
+        return manager.check(hashed, password)
+    return False
 
 
 @view_config(route_name='home', renderer='templates/list.jinja2')
@@ -173,27 +205,33 @@ def add_entry(request):
     return HTTPFound(request.route_url('home'))
 
 
-def do_login(request):
-    username = request.params.get('username', None)
-    password = request.params.get('password', None)
-    # CRITICAL:
-    # Do not distinguish between a bad password and a bad username!
-    # To do so is to leak sensitive information.
-    if not (username and password):
-        raise ValueError('both username and password are required')
+@view_config(route_name='login', renderer='templates/login.jinja2')
+def login(request):
+    username = request.params.get('username', '')
+    error = ''
 
-    settings = request.registry.settings
-    manager = BCRYPTPasswordManager()
-    if username == settings.get('auth.username', ''):
-        # NEVER
-        # EVER
-        # EVER
-        # STORE PLAIN TEXT PASSWORDS
-        # IN ANY FORMAT
-        # ANYWHERE
-        hashed = settings.get('auth.password', '')
-        return manager.check(hashed, password)
-    return False
+    if request.method == 'POST':
+        error = 'Login Failed'
+        authenticated = False
+        try:
+            authenticated = do_login(request)
+        except ValueError as e:
+            error = str(e)
+
+        if authenticated:
+            headers = remember(request, username)
+            return HTTPFound(request.route_url('home'),
+                             headers=headers)
+
+    return {'error': error, 'username': username}
+
+
+@view_config(route_name='logout')
+def logout(request):
+
+    headers = forget(request)
+
+    return HTTPFound(request.route_url('home'), headers=headers)
 
 
 if __name__ == '__main__':
