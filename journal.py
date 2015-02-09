@@ -3,6 +3,11 @@
 
 import os
 import logging
+from contextlib import closing
+import datetime
+
+import psycopg2
+from waitress import serve
 from pyramid.config import Configurator
 from pyramid.session import SignedCookieSessionFactory
 from pyramid.view import view_config
@@ -12,11 +17,7 @@ from pyramid.httpexceptions import HTTPFound, HTTPInternalServerError
 # authorization is figuring out what you can do when logged in.
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
-from waitress import serve
-import psycopg2
-from contextlib import closing
-import datetime
-
+from cryptacular.bcrypt import BCRYPTPasswordManager
 
 DB_SCHEMA = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -112,7 +113,11 @@ def main():
                                     'dbname=pyramid_learning_journal'
                                     ' user=fried')
     settings['auth.username'] = os.environ.get('AUTH_USERNAME', 'admin')
-    settings['auth.password'] = os.environ.get('AUTH_PASSWORD', 'secret')
+    manager = BCRYPTPasswordManager()
+    settings['auth.password'] = os.environ.get(
+        'AUTH_PASSWORD',
+        manager.encode('secret')
+    )
     # "secret value for session signing"
     secret = os.environ.get('JOURNAL_SESSION_SECRET', 'itsaseekrit')
     # "secret value for auth tkt signing"
@@ -179,6 +184,12 @@ def do_login(request):
 
     settings = request.registry.settings
     if username == settings.get('auth.username', ''):
+        # NEVER
+        # EVER
+        # EVER
+        # STORE PLAIN TEXT PASSWORDS
+        # IN ANY FORMAT
+        # ANYWHERE
         if password == settings.get('auth.password', ''):
             return True
     return False
