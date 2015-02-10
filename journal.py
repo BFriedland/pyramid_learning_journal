@@ -119,6 +119,8 @@ def main():
                                     ' user=fried')
     settings['auth.username'] = os.environ.get('AUTH_USERNAME', 'admin')
     manager = BCRYPTPasswordManager()
+    # Do remember that 'secret' is not a good password,
+    # and keeping it as a string in the source is a terrible idea.
     settings['auth.password'] = os.environ.get(
         'AUTH_PASSWORD',
         manager.encode('secret')
